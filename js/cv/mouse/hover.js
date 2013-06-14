@@ -29,7 +29,7 @@ define([
 
 			// bind on() handlers for various events
 			var evt = this.defaultEvent;
-			//this.call = this._handle(evt);
+			this.call = this._handle(evt);
 
 			this._events = [evt];
 			array.forEach(this.subEvents, function(subEvt){
@@ -86,11 +86,11 @@ define([
 					handles: {}
 				};
 
-				//TODO: first setup the handlers for our custom handlers
+				//first setup the handlers for our custom handlers
 				var _enter = lang.hitch(this, "_process", element, "enter");
 				var _leave = lang.hitch(this, "_process", element, "leave");
 
-				//TODO: create the link between native events and our custom handlers
+				//create the link between native events and our custom handlers
 				var handles = element.handles;
 				handles.enter = on(node, mouse.enter, _enter);
 				handles.leave = on(node, mouse.leave, _leave);
