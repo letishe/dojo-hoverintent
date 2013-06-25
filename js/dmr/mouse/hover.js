@@ -22,7 +22,6 @@ define([
 		interval: 100,
 		sensitivity: 7,
 		timeout: 200,
-		moveTracker: null,
 		cX: null,
 		cY: null,
 		pX: null,
@@ -44,21 +43,23 @@ define([
 			}, this);
 		},
 		enter: function(e){
-			if (this.hoverIntent_t) { this.hoverIntent_t = clearTimeout(this.hoverIntent_t); }
+			var el = this._getElement(e.target);
+			if (el.hoverTimeout) { el.hoverTimeout = clearTimeout(el.hoverTimeout); }
 			var _compare = lang.hitch(this, "comparePos", e);
 			// set "previous" X and Y position based on initial entry point
 			pX = e.pageX;
 			pY = e.pageY;
 			// update "current" X and Y position based on mousemove
-			this.moveTracker = on(e.target, "mousemove", this.setCurPos);
+			el.moveTracker = on(e.target, "mousemove", this.setCurPos);
 			// start polling interval (self-calling timeout) to compare mouse coordinates over time
-			if (this.hoverIntent_s != 1) {
-				this.hoverIntent_t = setTimeout(_compare, this.interval);
+			if (el.hoverStatus != 1) {
+				el.hoverTimeout = setTimeout(_compare, this.interval);
 			}
 		},
-		leave: function(/*Event*/e){
-			this.hoverIntent_t = clearTimeout(this.hoverIntent_t);
-			this.moveTracker.remove();
+		leave: function(e){
+			var el = this._getElement(e.target);
+			el.hoverTimeout = clearTimeout(el.hoverTimeout);
+			el.moveTracker.remove();
 			var _unhover = lang.hitch(this, "unhover", e);
 			//called on every mouse entering the dom element (right now)
 			// this.fire(e.target, {type: "hover.end"});
@@ -66,8 +67,8 @@ define([
 			//TODO: convert to dojo
 			// $(this).off("mousemove.hoverIntent",track);
 			// if hoverIntent state is true, then call the mouseOut function after the specified delay
-			if (this.hoverIntent_s == 1) {
-				this.hoverIntent_t = setTimeout(_unhover, this.timeout);
+			if (el.hoverStatus == 1) {
+				el.hoverTimeout = setTimeout(_unhover, this.timeout);
 			}
 		},
 		setCurPos: function(e){
@@ -76,12 +77,13 @@ define([
 			cY = e.pageY;
 		},
 		comparePos: function(e){
-			this.hoverIntent_t = clearTimeout(this.hoverIntent_t);
+			var el = this._getElement(e.target);
+			el.hoverTimeout = clearTimeout(el.hoverTimeout);
 			//compare mouse positions to see if they've crossed the "threshold"
 			if ( ( Math.abs(pX-cX) + Math.abs(pY-cY) ) < this.sensitivity ) {
-				this.moveTracker.remove();
+				el.moveTracker.remove();
 				// set hoverIntent state to true (so mouseOut can be called)
-				this.hoverIntent_s = 1;
+				el.hoverStatus = 1;
 				//TODO: cfg doesn't exist anymore - what is "over"
 				// return cfg.over.apply(o,[e]);
 				return this.fire(e.target, {type: "hover"});
@@ -90,11 +92,12 @@ define([
 				// set previous coordinates for next time
 				pX = cX; pY = cY;
 				// use self-calling timeout, guarantees intervals are spaced out properly (avoids JavaScript timer bugs)
-				this.hoverIntent_t = setTimeout( _compare , this.interval );
+				el.hoverTimeout = setTimeout( _compare , this.interval );
 			}
 		},
 		unhover: function(e){
-			this.hoverIntent_s = 0;
+			var el = this._getElement(e.target);
+			el.hoverStatus = 0;
 			return this.fire(e.target, {type: "hover.end"});
 		},
 		_handle: function(/*String*/eventType){
@@ -129,13 +132,16 @@ define([
 			// summary:
 			//		Bind dojo/on handlers for both gesture event(e.g 'tab.hold')
 			//		and underneath 'press'|'move'|'release' events
-			var element = this._getHoverElement(node);
+			var element = this._getElement(node);
 			if(!element){
 				// the first time listening to the node
 				element = {
 					target: node,
 					data: {},
-					handles: {}
+					handles: {},
+					hoverStatus: 0,
+					hoverTimeout: null,
+					moveTracker: null
 				};
 
 				//first setup the handlers for our custom handlers
@@ -154,7 +160,7 @@ define([
 
 			return on(node, type, listener); //handle
 		},
-		_getHoverElement: function(/*Dom*/node){
+		_getElement: function(/*Dom*/node){
 			// summary:
 			//		Obtain a gesture element for the give node
 			var i = 0, element;
@@ -214,7 +220,7 @@ define([
 			//		Check and remove underneath handlers if node
 			//		is not being listened for 'this' gesture anymore,
 			//		this happens when user removed all previous on() handlers.
-			var element = this._getHoverElement(node);
+			var element = this._getElement(node);
 			if(!element || !element.handles){ return; }
 
 			element.handles[type]--;
