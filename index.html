@@ -21,15 +21,14 @@
 		<script src="js/dojo-release-1.9.0-src/dojo/dojo.js"></script>
 		<script>
 			//use of the module will happen here specific to this page3
-			require(["dojo/query", "dojo/on", "cv/mouse/hover", "dojo/dom", "dojo/domReady!"],
-				function(query, on, hover, dom){
+			require(["dojo/query", "dojo/on", "cv/mouse/hover", "dojo/dom", "dojo/dom-style", "dojo/domReady!"],
+				function(query, on, hover, dom, style){
 					var boxes = query('.box');
 					boxes.on(hover, function(e){
-						console.log("hover");
+						style.set(e.target, "border-color", "red");
 					});
 					boxes.on(hover.end, function(e){
-						console.log("hover ended");
-					});
+						style.set(e.target, "border-color", "");					});
 				}
 			);
 		</script>

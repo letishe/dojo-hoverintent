@@ -4,9 +4,9 @@ define([
 	"dojo/_base/array",
 	"dojo/_base/lang",
 	"dojo/dom",
-    "dojo/on",
-    "dojo/mouse",
-    "../main"
+	"dojo/on",
+	"dojo/mouse",
+	"../main"
 ], function(kernel, declare, array, lang, dom, on, mouse, cv){
 
 	//logs message to console that this module is experimental
@@ -18,6 +18,15 @@ define([
 		defaultEvent: 'hover',
 		subEvents: ['end'],
 		_elements: null,
+		//hover intent variables
+		interval: 100,
+		sensitivity: 7,
+		timeout: 200,
+		moveTracker: null,
+		cX: null,
+		cY: null,
+		pX: null,
+		pY: null,
 		constructor: function(args){
 			lang.mixin(this, args);
 			this.init();
@@ -37,13 +46,70 @@ define([
 				this._events.push(evt + '.' + subEvt);
 			}, this);
 		},
-		enter: function(/*Object*/data, /*Event*/e){
+		enter: function(/*Event*/e){
 			//called on every mouse entering the dom element (right now)
-			this.fire(e.target, {type: "hover"});
+			//when enters should:
+			//cancel timer
+			//grab pos from event
+			//bind handler to mouse moving to update current position
+
+			// this.fire(e.target, {type: "hover"});
+
+			// cancel hoverIntent timer if it exists
+			if (this.hoverIntent_t) { this.hoverIntent_t = clearTimeout(this.hoverIntent_t); }
+			var _compare = lang.hitch(this, "comparePos", e);
+			// set "previous" X and Y position based on initial entry point
+			pX = e.pageX;
+			pY = e.pageY;
+			// update "current" X and Y position based on mousemove
+			//TODO: convert to dojo (if needed)
+			//$(this).on("mousemove.hoverIntent",track);
+			this.moveTracker = on(e.target, "mousemove", this.setCurPos);
+			// start polling interval (self-calling timeout) to compare mouse coordinates over time
+			if (this.hoverIntent_s != 1) {
+				this.hoverIntent_t = setTimeout(_compare, this.interval);
+			}
 		},
-		leave: function(/*Object*/data, /*Event*/e){
+		leave: function(/*Event*/e){
+			this.hoverIntent_t = clearTimeout(this.hoverIntent_t);
+			this.moveTracker.remove();
+			var _unhover = lang.hitch(this, "unhover", e);
 			//called on every mouse entering the dom element (right now)
-			this.fire(e.target, {type: "hover.end"});
+			// this.fire(e.target, {type: "hover.end"});
+			// unbind expensive mousemove event
+			//TODO: convert to dojo
+			// $(this).off("mousemove.hoverIntent",track);
+			// if hoverIntent state is true, then call the mouseOut function after the specified delay
+			if (this.hoverIntent_s == 1) {
+				this.hoverIntent_t = setTimeout(_unhover, this.timeout);
+			}
+		},
+		setCurPos: function(e){
+			//update current moust position
+			cX = e.pageX;
+			cY = e.pageY;
+		},
+		comparePos: function(e){
+			this.hoverIntent_t = clearTimeout(this.hoverIntent_t);
+			//compare mouse positions to see if they've crossed the "threshold"
+			if ( ( Math.abs(pX-cX) + Math.abs(pY-cY) ) < this.sensitivity ) {
+				this.moveTracker.remove();
+				// set hoverIntent state to true (so mouseOut can be called)
+				this.hoverIntent_s = 1;
+				//TODO: cfg doesn't exist anymore - what is "over"
+				// return cfg.over.apply(o,[e]);
+				return this.fire(e.target, {type: "hover"});
+			} else {
+				var _compare = lang.hitch(this, "comparePos", e);
+				// set previous coordinates for next time
+				pX = cX; pY = cY;
+				// use self-calling timeout, guarantees intervals are spaced out properly (avoids JavaScript timer bugs)
+				this.hoverIntent_t = setTimeout( _compare , this.interval );
+			}
+		},
+		unhover: function(e){
+			this.hoverIntent_s = 0;
+			return this.fire(e.target, {type: "hover.end"});
 		},
 		_handle: function(/*String*/eventType){
 			// summary:
@@ -144,7 +210,7 @@ define([
 				e.preventDefault();
 			}
 			e._locking[this.defaultEvent] = true;
-			this[phase](element.data, e);
+			this[phase](e);
 		},
 		_cleanHandles: function(/*Object*/handles){
 			// summary:
