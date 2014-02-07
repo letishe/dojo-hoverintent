@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>AMD hover intent module for dojo</title>
+		<link href="css/demo.css" rel="stylesheet" media="all"/>
+	</head>
+	<body>
+		<div class="box box1">Box 1</div>
+		<div class="box box2">Box 2</div>
+		<div class="box box3">Box 3</div>
+		<script>
+			var dojoConfig = {
+				async: true,
+				packages: [{
+					name: "dmr",
+					location: "/dojo-hoverintent/js/dmr"
+				}]
+			};
+		</script>
+		<script src="js/dojo-release-1.9.0-src/dojo/dojo.js"></script>
+		<script>
+			//use of the module will happen here specific to this page3
+			require(["dojo/query", "dojo/on", "dmr/mouse/hover", "dojo/dom", "dojo/dom-style", "dojo/domReady!"],
+				function(query, on, hover, dom, style){
+					var boxes = query('.box');
+					boxes.on(hover, function(e){
+						style.set(e.target, "border-color", "red");
+					});
+					boxes.on(hover.end, function(e){
+						style.set(e.target, "border-color", "");
+					});
+				}
+			);
+		</script>
+	</body>
+</html>
