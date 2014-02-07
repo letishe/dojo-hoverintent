@@ -1,7 +1,7 @@
 /*
 port of jQuery Hover Intent for Dojo
 Author: Chris Deemer
-
+originally intended for use with WSC
  */
 
 define([
